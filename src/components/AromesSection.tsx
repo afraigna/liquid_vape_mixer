@@ -157,12 +157,27 @@ export default function AromesSection({
 
                 {/* Nom + sous-titre dosage */}
                 <div className="min-w-0 flex items-baseline gap-1.5 overflow-hidden">
-                  <span
-                    className="text-[13px] font-medium truncate"
-                    style={{ color: '#2C2C2A' }}
-                  >
-                    {mix.arome.nom}
-                  </span>
+                  {mix.arome.product_url ? (
+                    <a
+                      href={mix.arome.product_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[13px] font-medium truncate"
+                      style={{ color: '#185FA5', textDecoration: 'none' }}
+                      onMouseEnter={(e) => (e.currentTarget.style.textDecoration = 'underline')}
+                      onMouseLeave={(e) => (e.currentTarget.style.textDecoration = 'none')}
+                      title="Voir la page produit"
+                    >
+                      {mix.arome.nom}
+                    </a>
+                  ) : (
+                    <span
+                      className="text-[13px] font-medium truncate"
+                      style={{ color: '#2C2C2A' }}
+                    >
+                      {mix.arome.nom}
+                    </span>
+                  )}
                   <span
                     className="text-[10.5px] flex-shrink-0"
                     style={{

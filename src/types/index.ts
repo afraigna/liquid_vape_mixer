@@ -5,6 +5,8 @@ export interface Arome {
   dosage_conseille: number
   dosage_custom: number | null
   couleur: string
+  product_url: string | null
+  description: string | null
 }
 
 export interface AromeMix {
@@ -44,6 +46,8 @@ export interface CreateAromePayload {
   dosage_conseille: number
   dosage_custom: number | null
   couleur: string
+  product_url: string | null
+  description: string | null
 }
 
 export type DoseMode = 'rec' | 'cust'

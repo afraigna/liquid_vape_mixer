@@ -43,6 +43,8 @@ interface FormState {
   dosageConseille: string
   dosageCustom: string
   couleur: string
+  productUrl: string
+  description: string
 }
 
 const DEFAULT_FORM: FormState = {
@@ -51,6 +53,8 @@ const DEFAULT_FORM: FormState = {
   dosageConseille: '',
   dosageCustom: '',
   couleur: '#378ADD',
+  productUrl: '',
+  description: '',
 }
 
 export default function AromeModal({
@@ -96,8 +100,10 @@ export default function AromeModal({
     return () => window.removeEventListener('keydown', onKey)
   }, [isOpen, onClose])
 
+  const q = search.toLowerCase()
   const filtered = libraryAromes.filter((a) =>
-    a.nom.toLowerCase().includes(search.toLowerCase()),
+    a.nom.toLowerCase().includes(q) ||
+    (a.description ?? '').toLowerCase().includes(q),
   )
 
   const handleAdd = (arome: Arome) => {
@@ -128,6 +134,8 @@ export default function AromeModal({
         dosage_conseille: rec,
         dosage_custom: isFinite(custRaw) ? custRaw : null,
         couleur: form.couleur,
+        product_url: form.productUrl.trim() || null,
+        description: form.description.trim() || null,
       }
       const created = await onCreate(payload)
       onAdd(created)
@@ -263,6 +271,9 @@ function LibraryView({
                   </div>
                   <div>
                     <div className="text-[13px] font-medium" style={{ color: '#2C2C2A' }}>{arome.nom}</div>
+                    {arome.description && (
+                      <div className="text-[11px]" style={{ color: '#56554F' }}>{arome.description}</div>
+                    )}
                     <div className="text-[11px] mt-0.5" style={{ color: '#888780', fontFamily: 'JetBrains Mono, monospace' }}>
                       Conseil {arome.dosage_conseille.toFixed(1)}% · Perso {(arome.dosage_custom ?? arome.dosage_conseille).toFixed(1)}%
                     </div>
@@ -395,6 +406,35 @@ function FormView({
             onChange={(e) => onChange({ imageUrl: e.target.value })}
             placeholder="https://…"
             type="url"
+            autoComplete="off"
+            className="w-full h-9 px-3 rounded-lg text-[13px] outline-none"
+            style={{ border: '0.5px solid #D3D1C7', background: '#fff', color: '#2C2C2A' }}
+            onFocus={(e) => (e.currentTarget.style.borderColor = '#185FA5')}
+            onBlur={(e) => (e.currentTarget.style.borderColor = '#D3D1C7')}
+          />
+        </FormField>
+
+        {/* Lien produit */}
+        <FormField label="Lien produit (URL)">
+          <input
+            value={form.productUrl}
+            onChange={(e) => onChange({ productUrl: e.target.value })}
+            placeholder="https://…"
+            type="url"
+            autoComplete="off"
+            className="w-full h-9 px-3 rounded-lg text-[13px] outline-none"
+            style={{ border: '0.5px solid #D3D1C7', background: '#fff', color: '#2C2C2A' }}
+            onFocus={(e) => (e.currentTarget.style.borderColor = '#185FA5')}
+            onBlur={(e) => (e.currentTarget.style.borderColor = '#D3D1C7')}
+          />
+        </FormField>
+
+        {/* Description */}
+        <FormField label="Description">
+          <input
+            value={form.description}
+            onChange={(e) => onChange({ description: e.target.value })}
+            placeholder="ex. goût ananas mangue"
             autoComplete="off"
             className="w-full h-9 px-3 rounded-lg text-[13px] outline-none"
             style={{ border: '0.5px solid #D3D1C7', background: '#fff', color: '#2C2C2A' }}
@@ -558,6 +598,7 @@ function NumInput({ value, placeholder, onChange }: { value: string; placeholder
         value={value}
         placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
+        onFocus={(e) => e.target.select()}
         className="flex-1 border-0 outline-none bg-transparent text-[13px] font-medium"
         style={{ color: '#2C2C2A' }}
       />

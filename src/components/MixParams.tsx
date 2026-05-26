@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import { MixParams } from '../types'
 
 const RATIOS: Array<{ label: string; value: number }> = [
@@ -109,6 +110,22 @@ interface NumFieldProps {
 }
 
 function NumField({ label, value, unit, min, step, onChange }: NumFieldProps) {
+  const [raw, setRaw] = useState(String(value))
+  const [focused, setFocused] = useState(false)
+
+  // Sync la valeur externe quand le champ n'est pas actif
+  useEffect(() => {
+    if (!focused) setRaw(String(value))
+  }, [value, focused])
+
+  const isEmpty = raw.trim() === ''
+  const borderColor = isEmpty ? '#BA4A1A' : focused ? '#185FA5' : '#D3D1C7'
+  const shadow = isEmpty
+    ? '0 0 0 3px rgba(186,74,26,.10)'
+    : focused
+    ? '0 0 0 3px rgba(24,95,165,.10)'
+    : 'none'
+
   return (
     <label className="flex flex-col gap-1.5">
       <span className="text-[11.5px] font-medium" style={{ color: '#56554F' }}>
@@ -116,24 +133,23 @@ function NumField({ label, value, unit, min, step, onChange }: NumFieldProps) {
       </span>
       <div
         className="flex items-center h-[38px] px-3 rounded-lg bg-white transition-shadow"
-        style={{ border: '0.5px solid #D3D1C7' }}
-        onFocus={(e) => {
-          e.currentTarget.style.borderColor = '#185FA5'
-          e.currentTarget.style.boxShadow = '0 0 0 3px rgba(24,95,165,.10)'
-        }}
-        onBlur={(e) => {
-          e.currentTarget.style.borderColor = '#D3D1C7'
-          e.currentTarget.style.boxShadow = 'none'
-        }}
+        style={{ border: `0.5px solid ${borderColor}`, boxShadow: shadow }}
       >
         <input
           type="number"
           min={min}
           step={step}
-          value={value}
+          value={raw}
           onChange={(e) => {
+            setRaw(e.target.value)
             const v = parseFloat(e.target.value)
             if (isFinite(v)) onChange(v)
+          }}
+          onFocus={(e) => { setFocused(true); e.target.select() }}
+          onBlur={() => {
+            setFocused(false)
+            // Si le champ est vide à la sortie, on revient à la dernière valeur valide
+            if (!isFinite(parseFloat(raw))) setRaw(String(value))
           }}
           className="flex-1 border-0 outline-none bg-transparent text-[15px] font-semibold w-full p-0"
           style={{ color: '#2C2C2A' }}
