@@ -1,2 +1,22 @@
+# Dépendances
+node_modules/
 
+# Build
+dist/
+
+# IDE
+.idea/
+.vscode/
+
+# macOS
 .DS_Store
+**/.DS_Store
+
+# Logs
+*.log
+npm-debug.log*
+
+# Env
+.env
+.env.local
+.env*.local

@@ -32,6 +32,7 @@ interface Props {
   onClose: () => void
   onAdd: (arome: Arome) => void
   onCreate: (payload: CreateAromePayload) => Promise<Arome>
+  onUpdate: (id: number, payload: CreateAromePayload) => Arome
 }
 
 type View = 'library' | 'form'
@@ -65,9 +66,11 @@ export default function AromeModal({
   onClose,
   onAdd,
   onCreate,
+  onUpdate,
 }: Props) {
   const [view, setView] = useState<View>('library')
-  const [formMode, _setFormMode] = useState<FormMode>('create')
+  const [formMode, setFormMode] = useState<FormMode>('create')
+  const [editingId, setEditingId] = useState<number | null>(null)
   const [search, setSearch] = useState('')
   const [form, setForm] = useState<FormState>(DEFAULT_FORM)
   const [saving, setSaving] = useState(false)
@@ -80,6 +83,8 @@ export default function AromeModal({
       setView('library')
       setSearch('')
       setForm(DEFAULT_FORM)
+      setFormMode('create')
+      setEditingId(null)
       setNameError(false)
     } else {
       setTimeout(() => searchRef.current?.focus(), 60)
@@ -117,6 +122,21 @@ export default function AromeModal({
     setForm((f) => ({ ...f, couleur: norm }))
   }
 
+  const handleEdit = (arome: Arome) => {
+    setEditingId(arome.id)
+    setFormMode('edit')
+    setForm({
+      nom: arome.nom,
+      imageUrl: arome.image_url ?? '',
+      dosageConseille: arome.dosage_conseille > 0 ? String(arome.dosage_conseille) : '',
+      dosageCustom: arome.dosage_custom != null ? String(arome.dosage_custom) : '',
+      couleur: arome.couleur,
+      productUrl: arome.product_url ?? '',
+      description: arome.description ?? '',
+    })
+    setView('form')
+  }
+
   const handleSave = async () => {
     if (!form.nom.trim()) {
       setNameError(true)
@@ -137,9 +157,14 @@ export default function AromeModal({
         product_url: form.productUrl.trim() || null,
         description: form.description.trim() || null,
       }
-      const created = await onCreate(payload)
-      onAdd(created)
-      onClose()
+      if (formMode === 'edit' && editingId != null) {
+        onUpdate(editingId, payload)
+        onClose()
+      } else {
+        const created = await onCreate(payload)
+        onAdd(created)
+        onClose()
+      }
     } catch (_) {
       // error silently
     } finally {
@@ -173,8 +198,9 @@ export default function AromeModal({
             currentMixIds={currentMixIds}
             onSearchChange={setSearch}
             onAdd={handleAdd}
+            onEdit={handleEdit}
             onClose={onClose}
-            onNewArome={() => { setForm(DEFAULT_FORM); setView('form') }}
+            onNewArome={() => { setFormMode('create'); setEditingId(null); setForm(DEFAULT_FORM); setView('form') }}
           />
         ) : (
           <FormView
@@ -197,7 +223,7 @@ export default function AromeModal({
 
 function LibraryView({
   search, searchRef, filtered, loading, currentMixIds,
-  onSearchChange, onAdd, onClose, onNewArome,
+  onSearchChange, onAdd, onEdit, onClose, onNewArome,
 }: {
   search: string
   searchRef: React.RefObject<HTMLInputElement | null>
@@ -206,6 +232,7 @@ function LibraryView({
   currentMixIds: number[]
   onSearchChange: (s: string) => void
   onAdd: (a: Arome) => void
+  onEdit: (a: Arome) => void
   onClose: () => void
   onNewArome: () => void
 }) {
@@ -278,33 +305,68 @@ function LibraryView({
                       Conseil {arome.dosage_conseille.toFixed(1)}% · Perso {(arome.dosage_custom ?? arome.dosage_conseille).toFixed(1)}%
                     </div>
                   </div>
-                  <button
-                    onClick={() => onAdd(arome)}
-                    disabled={added}
-                    className="h-7 px-3 rounded-[7px] text-[12px] font-medium cursor-pointer transition-colors"
-                    style={{
-                      border: '0.5px solid #D3D1C7',
-                      background: added ? '#F1EFE7' : '#fff',
-                      color: added ? '#888780' : '#2C2C2A',
-                      cursor: added ? 'default' : 'pointer',
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!added) {
-                        e.currentTarget.style.background = '#E6F1FB'
-                        e.currentTarget.style.color = '#185FA5'
-                        e.currentTarget.style.borderColor = '#185FA5'
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (!added) {
-                        e.currentTarget.style.background = '#fff'
-                        e.currentTarget.style.color = '#2C2C2A'
-                        e.currentTarget.style.borderColor = '#D3D1C7'
-                      }
-                    }}
-                  >
-                    {added ? 'Ajouté' : '＋ Ajouter'}
-                  </button>
+                  <div className="flex items-center gap-1.5">
+                    {/* Bouton crayon — tous les arômes sont éditables */}
+                    <button
+                      onClick={() => onEdit(arome)}
+                      title="Modifier"
+                      className="h-7 w-7 rounded-[7px] flex items-center justify-center cursor-pointer transition-colors flex-shrink-0"
+                      style={{ border: '0.5px solid #D3D1C7', background: '#fff', color: '#888780' }}
+                      onMouseEnter={(e) => { e.currentTarget.style.background = '#F4F2EC'; e.currentTarget.style.color = '#2C2C2A' }}
+                      onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.color = '#888780' }}
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                      </svg>
+                    </button>
+                    {/* Bouton panier — si lien produit défini */}
+                    {arome.product_url && (
+                      <a
+                        href={arome.product_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title="Voir la page produit"
+                        className="h-7 w-7 rounded-[7px] flex items-center justify-center transition-colors flex-shrink-0"
+                        style={{ border: '0.5px solid #D3D1C7', background: '#fff', color: '#888780', textDecoration: 'none' }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = '#E6F1FB'; e.currentTarget.style.color = '#185FA5'; e.currentTarget.style.borderColor = '#185FA5' }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.color = '#888780'; e.currentTarget.style.borderColor = '#D3D1C7' }}
+                      >
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
+                          <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+                        </svg>
+                      </a>
+                    )}
+                    {/* Bouton ajouter au mix */}
+                    <button
+                      onClick={() => onAdd(arome)}
+                      disabled={added}
+                      className="h-7 px-3 rounded-[7px] text-[12px] font-medium cursor-pointer transition-colors flex-shrink-0"
+                      style={{
+                        border: '0.5px solid #D3D1C7',
+                        background: added ? '#F1EFE7' : '#fff',
+                        color: added ? '#888780' : '#2C2C2A',
+                        cursor: added ? 'default' : 'pointer',
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!added) {
+                          e.currentTarget.style.background = '#E6F1FB'
+                          e.currentTarget.style.color = '#185FA5'
+                          e.currentTarget.style.borderColor = '#185FA5'
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!added) {
+                          e.currentTarget.style.background = '#fff'
+                          e.currentTarget.style.color = '#2C2C2A'
+                          e.currentTarget.style.borderColor = '#D3D1C7'
+                        }
+                      }}
+                    >
+                      {added ? 'Ajouté' : '＋ Ajouter'}
+                    </button>
+                  </div>
                 </div>
               )
             })}
@@ -340,7 +402,7 @@ function LibraryView({
 }
 
 function FormView({
-  form, nameRef, nameError, saving,
+  form, formMode, nameRef, nameError, saving,
   onChange, onSetColor, onBack, onClose, onSave,
 }: {
   form: FormState
@@ -374,7 +436,9 @@ function FormView({
             </svg>
             Bibliothèque
           </button>
-          <div className="text-[14px] font-semibold mt-1" style={{ color: '#2C2C2A' }}>Nouvel arôme</div>
+          <div className="text-[14px] font-semibold mt-1" style={{ color: '#2C2C2A' }}>
+            {formMode === 'edit' ? 'Modifier l\'arôme' : 'Nouvel arôme'}
+          </div>
         </div>
         <XBtn onClick={onClose} />
       </div>
@@ -545,7 +609,9 @@ function FormView({
         className="flex items-center justify-between px-4.5 py-3"
         style={{ borderTop: '0.5px solid #E8E6DE', background: '#FCFBF8' }}
       >
-        <span className="text-[11px]" style={{ color: '#888780' }}>Sera ajouté à la bibliothèque et à la recette.</span>
+        <span className="text-[11px]" style={{ color: '#888780' }}>
+          {formMode === 'edit' ? 'Les modifications seront appliquées au catalogue.' : 'Sera ajouté à la bibliothèque et à la recette.'}
+        </span>
         <div className="flex gap-2">
           <button
             onClick={onClose}
@@ -564,7 +630,7 @@ function FormView({
             onMouseEnter={(e) => { if (!saving) e.currentTarget.style.background = '#1A1A18' }}
             onMouseLeave={(e) => { if (!saving) e.currentTarget.style.background = '#2C2C2A' }}
           >
-            {saving ? 'Création…' : 'Créer et ajouter'}
+            {saving ? '…' : formMode === 'edit' ? 'Enregistrer' : 'Créer et ajouter'}
           </button>
         </div>
       </div>

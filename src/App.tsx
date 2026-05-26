@@ -36,7 +36,7 @@ export default function App() {
   const [toast, setToast] = useState<ToastState>({ message: '', visible: false })
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const { aromes, loading, create } = useAromes()
+  const { aromes, catalogIds, loading, create, edit } = useAromes()
 
   const result = useMemo(
     () => calculate(params, aromeMixes, doseMode),
@@ -88,6 +88,16 @@ export default function App() {
       prev.map((m) => (m.arome.id === updated.id ? { ...m, arome: updated } : m)),
     )
   }, [])
+
+  // Wrapper appelé par AromeModal en mode édition : met à jour la librairie ET le mix si besoin
+  const handleUpdateFromModal = useCallback(
+    (id: number, payload: import('./types').CreateAromePayload): Arome => {
+      const updated = edit(id, payload, catalogIds.has(id))
+      handleUpdateArome(updated)
+      return updated
+    },
+    [edit, catalogIds, handleUpdateArome],
+  )
 
   const handleCopy = useCallback(async () => {
     const lines = [
@@ -211,6 +221,7 @@ export default function App() {
         onClose={() => setAromeModalOpen(false)}
         onAdd={handleAddArome}
         onCreate={create}
+        onUpdate={handleUpdateFromModal}
       />
 
       <HistoryModal
